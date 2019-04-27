@@ -10,11 +10,15 @@ from werkzeug.exceptions import HTTPException
 
 app = FlaskAPI(__name__)
 redis = redis.Redis('localhost', charset='utf-8', decode_responses=True)
-redis.flushall()  # clear before start
+redis.flushall()  # clear cache before start
 
 
 @app.route("/add_new_list/", methods=['POST'])
 def add_new_list():
+    '''
+    add new item list into db (redis cache for now).
+    list must be sended on 'new_item' argument
+    '''
     try:
         items = request.data.get('new_item')
         if not items:
@@ -35,6 +39,9 @@ def add_new_list():
 
 @app.route("/show_lists/", methods=['GET'])
 def items_list():
+    '''
+    show a list of previously sended lists
+    '''
     try:
         list(map(print, [redis.get(key) for key in redis.keys()]))
         return {'lists': [json.loads(redis.get(key)) for key in redis.keys()]}
@@ -45,6 +52,10 @@ def items_list():
 
 @app.errorhandler(HTTPException)
 def base_http_error_handler(e):
+    '''
+    base handler for all http errors
+    send error data in json format
+    '''
     try:
         error = {
             'code': e.code,
