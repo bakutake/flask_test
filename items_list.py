@@ -21,7 +21,7 @@ def add_new_list():
     '''
     try:
         items = request.data.get('new_item')
-        if not items:
+        if items is None:
             return {'status': 'error', 'errors': 'no data[new_item]'}, \
                     status.HTTP_400_BAD_REQUEST
 
@@ -60,7 +60,7 @@ def base_http_error_handler(e):
         error = {
             'code': e.code,
             'description': e.description,
-            'headers': e.get_headers(),
+            'headers': e.get_headers()[0],
             # 'traceback': traceback.format_exc(),
         }
         return {'status': 'error', 'error': error}, e.code
