@@ -5,6 +5,7 @@ from flask import Flask, request, jsonify
 from flask_redis import redis
 from flask_api import FlaskAPI, status
 from flask_api.renderers import JSONRenderer
+from werkzeug.exceptions import HTTPException
 
 
 app = FlaskAPI(__name__)
@@ -42,10 +43,20 @@ def items_list():
         return {'status': 'error', 'errors': tb}, status.HTTP_400_BAD_REQUEST
 
 
-@app.errorhandler(404)
-def page_not_found(e):
-    return {'status': 'error', 'errors': 'not found'}, \
-            status.HTTP_404_NOT_FOUND
+@app.errorhandler(HTTPException)
+def base_http_error_handler(e):
+    try:
+        error = {
+            'code': e.code,
+            'description': e.description,
+            'headers': e.get_headers(),
+            # 'traceback': traceback.format_exc(),
+        }
+        return {'status': 'error', 'error': error}, e.code
+    except Exception as ex:
+        tb = traceback.format_exc()
+        return {'status': 'error', 'errors': tb}, \
+                status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
 if __name__ == '__main__':
