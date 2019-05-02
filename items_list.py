@@ -23,6 +23,7 @@ def log_errors(func):
             return func(*args, **kwargs)
         except Exception as ex:
             tb = traceback.format_exc()
+            # add error logging here if needed
             return {'status': 'error', 'errors': tb}, \
                     status.HTTP_500_INTERNAL_SERVER_ERROR
     wrapper_log_errors.__name__ = 'wrapper_' + func.__name__
@@ -38,18 +39,22 @@ def add_new_list():
     '''
     items = request.data.get('new_item')
     if not items:
-        return {'status': 'error', 'errors': 'no data[new_item]'}, \
-                status.HTTP_400_BAD_REQUEST
+        error = {
+            'code': status.HTTP_400_BAD_REQUEST,
+            'description': 'no data[new_item]',
+        }
+        return {'status': 'error', 'error': error}, status.HTTP_400_BAD_REQUEST
 
     if type(items) is not list:
-        print(type(items))
-        print(items)
-        return {'status': 'error', 'errors': 'new_item isn\'t list'}, \
-                status.HTTP_400_BAD_REQUEST
+        error = {
+            'code': status.HTTP_400_BAD_REQUEST,
+            'description': 'new_item isn\'t list',
+        }
+        return {'status': 'error', 'error': error}, status.HTTP_400_BAD_REQUEST
 
     items_json = json.dumps(items)
     redis.set(len(redis.keys()), items_json)
-    return {'status': 'ok'}, status.HTTP_200_OK
+    return {'status': 'ok'}, status.HTTP_201_CREATED
 
 
 @app.route("/show_lists/", methods=['GET'])
@@ -58,15 +63,14 @@ def items_list():
     '''
     show a list of previously sended lists
     '''
-    list(map(print, [redis.get(key) for key in redis.keys()]))
     return {'lists': [json.loads(redis.get(key)) for key in redis.keys()]}
 
 
-# @app.route("/example_error/", methods=['GET'])
-# @log_errors
-# def example_error():
-#     5 / 0
-#     return {'result': 'result'}
+@app.route("/example_error/", methods=['GET'])
+@log_errors
+def example_error():
+    5 / 0
+    return {'result': 'result'}
 
 
 @app.errorhandler(HTTPException)
@@ -79,8 +83,6 @@ def base_http_error_handler(e):
         error = {
             'code': e.code,
             'description': e.description,
-            # 'headers': e.get_headers()[0],
-            # 'traceback': traceback.format_exc(),
         }
         return {'status': 'error', 'error': error}, e.code
     except Exception as ex:
